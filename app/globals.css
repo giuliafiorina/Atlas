@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --background: #f6f0e7;
+  --foreground: #221f1a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: #244033;
+  color: #fffdf8;
+}
+
+.journal-card {
+  background: #fffdf8;
+}
+
+.prose-editor:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(34, 31, 26, 0.35);
+}
+
+.prose-editor h2 {
+  margin: 1.4rem 0 0.6rem;
+  font-size: 2.3rem;
+  line-height: 1.05;
+  font-weight: 600;
+}
+
+.prose-editor h3 {
+  margin: 1.2rem 0 0.4rem;
+  font-size: 1.7rem;
+  line-height: 1.15;
+  font-weight: 600;
+}
+
+.prose-editor blockquote {
+  margin: 1.4rem 0;
+  border-left: 3px solid #244033;
+  padding-left: 1rem;
+  color: rgba(34, 31, 26, 0.72);
+}
+
+.journal-body h2 {
+  margin: 2rem 0 0.75rem;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 2.3rem;
+  line-height: 1.05;
+  color: #221f1a;
+}
+
+.journal-body h3 {
+  margin: 1.6rem 0 0.65rem;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.7rem;
+  line-height: 1.15;
+  color: #221f1a;
+}
+
+.journal-body p {
+  margin: 1.2rem 0;
+}
+
+.journal-body blockquote {
+  margin: 1.8rem 0;
+  border-left: 3px solid #244033;
+  padding-left: 1.2rem;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.75rem;
+  line-height: 1.35;
+  color: rgba(34, 31, 26, 0.74);
+}
