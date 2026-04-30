@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bone: "#F6F0E7",
+        bone: "#F5EFE0",
         paper: "#FFFDF8",
         oatmeal: "#E9DDCE",
         moss: "#244033",

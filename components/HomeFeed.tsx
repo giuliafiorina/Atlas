@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { JournalCard } from "@/components/JournalCard";
+import { LiveWorldMap } from "@/components/LiveWorldMap";
 import { categories, type AtlasJournal, type TravelCategory } from "@/data/journals";
-import { mapJournalRow } from "@/lib/journal-mappers";
+import { mapJournalRow, normalizeAuthorName } from "@/lib/journal-mappers";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import Link from "next/link";
 
@@ -30,13 +31,38 @@ export function HomeFeed({ journals }: HomeFeedProps) {
       .from("journals")
       .select("*")
       .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (!isMounted) {
           return;
         }
 
         if (!error && data) {
-          setLiveJournals(data.map(mapJournalRow));
+          const mappedJournals = data.map(mapJournalRow);
+          const authorIds = Array.from(
+            new Set(mappedJournals.map((journal) => journal.authorId))
+          );
+
+          if (authorIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from("users")
+              .select("id, full_name")
+              .in("id", authorIds);
+            const profileNames = new Map(
+              (profiles ?? []).map((profile) => [profile.id, profile.full_name])
+            );
+
+            setLiveJournals(
+              mappedJournals.map((journal) => ({
+                ...journal,
+                authorName: normalizeAuthorName(
+                  journal.authorName,
+                  profileNames.get(journal.authorId)
+                )
+              }))
+            );
+          } else {
+            setLiveJournals(mappedJournals);
+          }
         }
 
         setIsLoadingLiveFeed(false);
@@ -55,9 +81,15 @@ export function HomeFeed({ journals }: HomeFeedProps) {
     return liveJournals.filter((post) => post.category === selectedCategory);
   }, [liveJournals, selectedCategory]);
 
+  function removeDeletedJournal(journalId: string) {
+    setLiveJournals((current) => current.filter((journal) => journal.id !== journalId));
+  }
+
   return (
     <section id="explore" className="border-y border-ink/10 bg-paper py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+        <LiveWorldMap journals={liveJournals} />
+
         <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss">
@@ -85,7 +117,11 @@ export function HomeFeed({ journals }: HomeFeedProps) {
         ) : filteredPosts.length > 0 ? (
           <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {filteredPosts.map((post) => (
-              <JournalCard key={post.id} post={post} />
+              <JournalCard
+                key={post.id}
+                post={post}
+                onDeleted={removeDeletedJournal}
+              />
             ))}
           </div>
         ) : (

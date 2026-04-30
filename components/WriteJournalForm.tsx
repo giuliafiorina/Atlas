@@ -12,7 +12,7 @@ import {
   type TravelCategory,
   type TravelSticker
 } from "@/data/journals";
-import { calculateReadTime } from "@/lib/journal-mappers";
+import { calculateReadTime, normalizeAuthorName } from "@/lib/journal-mappers";
 import { pointsByAction } from "@/lib/reputation";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { adjustUserPoints, ensureAtlasUser } from "@/lib/users";
@@ -164,11 +164,10 @@ export function WriteJournalForm() {
         stickers,
         photo_url: publicPhoto.publicUrl,
         author_id: user.id,
-        author_name:
-          user.fullName ??
-          user.firstName ??
-          user.primaryEmailAddress?.emailAddress ??
-          "Atlas Traveler",
+        author_name: normalizeAuthorName(
+          user.fullName ?? user.firstName ?? user.primaryEmailAddress?.emailAddress,
+          profile.full_name
+        ),
         author_rank: profile.rank_name,
         hearts: 0,
         comments_count: 0,

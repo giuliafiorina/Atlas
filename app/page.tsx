@@ -13,10 +13,11 @@ export default async function Home() {
     <main>
       <SiteHeader />
       <Hero />
+      <div className="old-map-edge h-3" aria-hidden="true" />
       <HomeFeed journals={journals} />
       <section
         id="trip-buddy-board"
-        className="mx-auto grid max-w-7xl gap-8 px-5 py-20 sm:px-8 lg:grid-cols-[0.75fr_1.25fr] lg:px-10 lg:py-24"
+        className="map-border relative mx-auto grid max-w-7xl gap-8 border-x border-umber/10 px-5 py-20 sm:px-8 lg:grid-cols-[0.75fr_1.25fr] lg:px-10 lg:py-24"
       >
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss">

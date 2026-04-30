@@ -106,6 +106,29 @@ create policy "Anyone can update journal engagement"
   using (true)
   with check (true);
 
+create or replace function public.delete_journal_for_author(
+  journal_uuid uuid,
+  clerk_user_id text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  deleted_count integer;
+begin
+  delete from public.journals
+  where id = journal_uuid
+    and author_id = clerk_user_id;
+
+  get diagnostics deleted_count = row_count;
+  return deleted_count > 0;
+end;
+$$;
+
+grant execute on function public.delete_journal_for_author(uuid, text) to anon, authenticated;
+
 create index if not exists journals_created_at_idx on public.journals (created_at desc);
 create index if not exists journals_category_idx on public.journals (category);
 create index if not exists journals_author_id_idx on public.journals (author_id);

@@ -1,13 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Playfair+Display:wght@600;700;800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
-  --font-serif: Georgia, "Times New Roman", serif;
+  --font-serif: "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif;
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  --background: #f6f0e7;
+  --background: #f5efe0;
   --foreground: #221f1a;
 }
 
@@ -22,7 +24,13 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(138, 96, 64, 0.08), transparent 28%),
+    radial-gradient(circle at 86% 18%, rgba(36, 64, 51, 0.06), transparent 26%),
+    linear-gradient(rgba(138, 96, 64, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(138, 96, 64, 0.035) 1px, transparent 1px);
+  background-size: auto, auto, 72px 72px, 72px 72px;
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   text-rendering: optimizeLegibility;
@@ -47,6 +55,35 @@ select {
 
 .journal-card {
   background: #fffdf8;
+}
+
+.map-border {
+  position: relative;
+}
+
+.map-border::before,
+.map-border::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(138, 96, 64, 0.22);
+}
+
+.map-border::after {
+  inset: 16px;
+  border-color: rgba(36, 64, 51, 0.12);
+}
+
+.old-map-edge {
+  border-top: 1px solid rgba(138, 96, 64, 0.2);
+  border-bottom: 1px solid rgba(138, 96, 64, 0.14);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgba(138, 96, 64, 0.12),
+    transparent
+  );
 }
 
 .prose-editor:empty::before {
@@ -103,4 +140,51 @@ select {
   font-size: 1.75rem;
   line-height: 1.35;
   color: rgba(34, 31, 26, 0.74);
+}
+
+.leaflet-container {
+  z-index: 0;
+  background: #d9c9b7;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid rgba(34, 31, 26, 0.12) !important;
+  box-shadow: 0 14px 40px rgba(34, 31, 26, 0.08) !important;
+}
+
+.leaflet-control-zoom a {
+  background: #fffdf8 !important;
+  color: #221f1a !important;
+  border-bottom-color: rgba(34, 31, 26, 0.1) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  background: #fffdf8 !important;
+  color: #221f1a !important;
+  box-shadow: 0 22px 70px rgba(34, 31, 26, 0.14) !important;
+}
+
+.leaflet-popup-tip {
+  background: #fffdf8 !important;
+}
+
+.atlas-map-pin {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fffdf8;
+  border-radius: 999px;
+  background: #b96e45;
+  box-shadow: 0 12px 28px rgba(34, 31, 26, 0.24);
+}
+
+.atlas-map-pin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #fffdf8;
 }

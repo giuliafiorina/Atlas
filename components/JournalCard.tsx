@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { Bookmark, Heart, MessageCircle, MapPin } from "lucide-react";
+import { Bookmark, Heart, MessageCircle, MapPin, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -17,9 +17,10 @@ import { adjustUserPoints, ensureAtlasUser } from "@/lib/users";
 
 type JournalCardProps = {
   post: AtlasJournal;
+  onDeleted?: (journalId: string) => void;
 };
 
-export function JournalCard({ post }: JournalCardProps) {
+export function JournalCard({ post, onDeleted }: JournalCardProps) {
   const rank = getReputationByName(post.authorRank);
   const router = useRouter();
   const pathname = usePathname();
@@ -30,6 +31,14 @@ export function JournalCard({ post }: JournalCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isUpdatingHeart, setIsUpdatingHeart] = useState(false);
   const [isUpdatingSave, setIsUpdatingSave] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const isAuthor = user?.id === post.authorId;
+  const authorDisplayName = post.authorName.includes("@")
+    ? post.authorName.split("@")[0]
+    : post.authorName === "Atlas Traveler"
+      ? "Traveler"
+      : post.authorName;
 
   useEffect(() => {
     setHeartCount(post.hearts);
@@ -268,6 +277,46 @@ export function JournalCard({ post }: JournalCardProps) {
     }
   }
 
+  async function deleteJournal() {
+    if (!user) {
+      redirectToSignIn();
+      return;
+    }
+
+    if (!isAuthor || isDeleting) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete "${post.title}"? This cannot be undone.`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteError("");
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch(`/api/journals/${post.id}`, {
+        method: "DELETE"
+      });
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Could not delete this journal.");
+      }
+
+      onDeleted?.(post.id);
+      router.refresh();
+    } catch (caughtError) {
+      setDeleteError(
+        caughtError instanceof Error ? caughtError.message : "Could not delete this journal."
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-lg border border-ink/10 bg-paper shadow-[0_18px_60px_rgba(34,31,26,0.08)] transition duration-300 hover:-translate-y-1 hover:border-moss/35 hover:shadow-soft">
       <div className="relative aspect-[4/5] overflow-hidden bg-[#CFA06F]">
@@ -282,7 +331,6 @@ export function JournalCard({ post }: JournalCardProps) {
           <div className="absolute inset-0 bg-[#CFA06F]" />
         )}
         <div className="absolute inset-0 border-[18px] border-paper/12" />
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-ink/30" />
         <div className="absolute left-5 top-5 flex gap-3">
           {post.stickers.map((sticker, index) => (
             <span
@@ -297,27 +345,50 @@ export function JournalCard({ post }: JournalCardProps) {
             </span>
           ))}
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-6 text-paper">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-paper/75">
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <div className="border-b border-ink/10 pb-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-moss">
             {post.zoneName}
           </p>
-          <p className="mt-2 font-serif text-5xl font-semibold leading-none drop-shadow-sm">
+          <p className="mt-2 font-serif text-4xl font-semibold leading-none text-ink">
             {post.locationName}
           </p>
-          <p className="mt-3 flex items-center gap-2 text-sm font-medium text-paper/85">
+          <p className="mt-3 font-serif text-2xl font-semibold leading-tight text-ink/80">
+            {post.title}
+          </p>
+          <p className="mt-3 flex items-center gap-2 text-sm font-medium text-ink/55">
             <MapPin aria-hidden="true" size={15} />
             {post.journeyMode ? "The journey was the destination" : "Atlas journal"}
           </p>
         </div>
-      </div>
 
-      <div className="flex flex-1 flex-col p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-ink">{post.authorName}</span>
-          <span className="rounded-full bg-moss px-2.5 py-1 text-xs font-bold text-paper">
-            L{rank.level} {rank.name}
-          </span>
+        <div className="mt-5 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-ink">{authorDisplayName}</span>
+            <span className="rounded-full bg-moss px-2.5 py-1 text-xs font-bold text-paper">
+              L{rank.level} {rank.name}
+            </span>
+          </div>
+          {isAuthor ? (
+            <button
+              type="button"
+              onClick={deleteJournal}
+              disabled={isDeleting}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/10 text-ink/55 transition hover:border-clay hover:bg-[#F4E3D8] hover:text-clay disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={`Delete ${post.title}`}
+            >
+              <Trash2 aria-hidden="true" size={16} />
+            </button>
+          ) : null}
         </div>
+
+        {deleteError ? (
+          <p className="mt-3 rounded-lg bg-[#F4E3D8] px-3 py-2 text-xs font-semibold text-[#713B25]">
+            {deleteError}
+          </p>
+        ) : null}
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span

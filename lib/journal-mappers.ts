@@ -12,6 +12,23 @@ export function calculateReadTime(body: string) {
   return Math.max(1, Math.ceil(wordCount / 220));
 }
 
+export function normalizeAuthorName(
+  authorName: string | null | undefined,
+  fallbackName?: string | null
+) {
+  const rawName = fallbackName || authorName || "Traveler";
+
+  if (rawName === "Atlas Traveler") {
+    return "Traveler";
+  }
+
+  if (rawName.includes("@")) {
+    return rawName.split("@")[0] || "Traveler";
+  }
+
+  return rawName;
+}
+
 export function mapJournalRow(row: JournalRow): AtlasJournal {
   const category = isTravelCategory(row.category) ? row.category : "Slow travel";
   const stickers = (row.stickers ?? []).filter(isTravelSticker).slice(0, 2) as TravelSticker[];
@@ -29,7 +46,7 @@ export function mapJournalRow(row: JournalRow): AtlasJournal {
     stickers: stickers.length === 2 ? stickers : ["map pin", "camera"],
     photoUrl: row.photo_url,
     authorId: row.author_id ?? "placeholder-user",
-    authorName: row.author_name ?? "Atlas Traveler",
+    authorName: normalizeAuthorName(row.author_name),
     authorRank: rank.name,
     hearts: row.hearts,
     commentsCount: row.comments_count,
