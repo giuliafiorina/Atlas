@@ -1,7 +1,7 @@
 "use client";
 
 import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs";
-import { Menu, PenLine, X } from "lucide-react";
+import { Bell, Menu, PenLine, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -9,7 +9,7 @@ import { ensureAtlasUser } from "@/lib/users";
 
 const navLinks = [
   { label: "Explore", href: "/explore" },
-  { label: "Trip Buddy Board", href: "#trip-buddy-board" }
+  { label: "Map", href: "/#map" }
 ];
 
 export function SiteHeader() {
@@ -59,6 +59,13 @@ export function SiteHeader() {
         </div>
 
         <div className="hidden items-center gap-4 md:flex">
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ink/15 text-ink/60 transition hover:border-moss hover:text-moss"
+          >
+            <Bell aria-hidden="true" size={16} />
+          </button>
           <SignedOut>
             <Link
               href="/sign-in"

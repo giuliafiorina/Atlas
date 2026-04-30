@@ -41,6 +41,8 @@ export function mapJournalRow(row: JournalRow): AtlasJournal {
     teaser: row.teaser ?? row.body.slice(0, 140),
     locationName: row.location_name ?? "Somewhere",
     zoneName: row.zone_name ?? "Unmapped",
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
     category,
     journeyMode: row.journey_mode,
     stickers: stickers.length === 2 ? stickers : ["map pin", "camera"],

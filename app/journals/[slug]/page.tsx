@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Footer } from "@/components/Footer";
+import { HeartButton } from "@/components/HeartButton";
 import { RankProgress } from "@/components/RankProgress";
 import { SiteHeader } from "@/components/SiteHeader";
 import { categoryStyles, getReputationByName, stickerGlyphs } from "@/data/journals";
@@ -57,11 +58,20 @@ export default async function JournalPage({ params }: JournalPageProps) {
           {post.title}
         </h1>
 
-        <div className="mt-6 flex flex-wrap items-center gap-2 text-base">
-          <span className="font-semibold text-ink">{post.authorName}</span>
-          <span className="rounded-full bg-moss px-2.5 py-1 text-xs font-bold text-paper">
-            L{rank.level} {rank.name}
-          </span>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2 text-base">
+            <span className="font-semibold text-ink">{post.authorName}</span>
+            <span className="rounded-full bg-moss px-2.5 py-1 text-xs font-bold text-paper">
+              L{rank.level} {rank.name}
+            </span>
+          </div>
+          <HeartButton
+            journalId={post.id}
+            authorId={post.authorId}
+            authorName={post.authorName}
+            initialCount={post.hearts}
+            variant="detail"
+          />
         </div>
 
         <div className="relative mt-10 aspect-[16/10] overflow-hidden bg-[#CFA06F]">

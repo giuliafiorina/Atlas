@@ -1,106 +1,220 @@
-import { ArrowRight, BookOpen, Compass } from "lucide-react";
+"use client";
+
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import { Globe, PenLine } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import type { AtlasJournal } from "@/data/journals";
+import type { JournalMapPin } from "@/components/LiveWorldMap";
 
-export function Hero() {
+type HeroProps = {
+  journals: AtlasJournal[];
+};
+
+type NominatimResult = {
+  lat: string;
+  lon: string;
+};
+
+const geocodeCache = new Map<string, { lat: number; lng: number } | null>();
+
+async function geocodeLocation(location: string) {
+  const key = location.trim().toLowerCase();
+  if (geocodeCache.has(key)) return geocodeCache.get(key) ?? null;
+
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("q", location);
+
+  const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+  if (!res.ok) { geocodeCache.set(key, null); return null; }
+
+  const results = (await res.json()) as NominatimResult[];
+  const first = results[0];
+  if (!first) { geocodeCache.set(key, null); return null; }
+
+  const coords = { lat: Number(first.lat), lng: Number(first.lon) };
+  geocodeCache.set(key, coords);
+  return coords;
+}
+
+const AtlasLeafletMap = dynamic(() => import("@/components/AtlasLeafletMap"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-[#E8DFD0]" />
+});
+
+const categoryLegend = [
+  { label: "Adventure", color: "#4CAF50" },
+  { label: "Culture", color: "#EF4444" },
+  { label: "Backpacking", color: "#F97316" },
+  { label: "Luxury", color: "#A855F7" },
+  { label: "Slow Travel", color: "#3B82F6" }
+];
+
+const communityAvatars = [
+  { letter: "A", bg: "#244033" },
+  { letter: "M", bg: "#B96E45" },
+  { letter: "S", bg: "#527B81" },
+  { letter: "L", bg: "#8B5364" }
+];
+
+export function Hero({ journals }: HeroProps) {
+  const [pins, setPins] = useState<JournalMapPin[]>([]);
+
+  // Only journals with a real location (not the "Somewhere" fallback)
+  const journalsWithLocations = useMemo(
+    () => journals.filter((j) => {
+      const loc = j.locationName.trim();
+      return loc.length > 0 && loc !== "Somewhere";
+    }),
+    [journals]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function resolvePins() {
+      for (const journal of journalsWithLocations) {
+        if (!isMounted) return;
+
+        // Prefer stored coordinates — skip Nominatim entirely when we have them
+        if (journal.latitude !== null && journal.longitude !== null) {
+          setPins((prev) => {
+            if (prev.some((p) => p.id === journal.id)) return prev;
+            return [...prev, {
+              id: journal.id,
+              title: journal.title,
+              authorName: journal.authorName,
+              locationName: journal.locationName,
+              category: journal.category,
+              photoUrl: journal.photoUrl,
+              teaser: journal.teaser,
+              createdAt: journal.createdAt,
+              lat: journal.latitude as number,
+              lng: journal.longitude as number
+            }];
+          });
+          continue;
+        }
+
+        // Fall back to Nominatim geocoding for older journals without stored coords
+        const cacheKey = journal.locationName.trim().toLowerCase();
+        const wasCached = geocodeCache.has(cacheKey);
+        const coords = await geocodeLocation(journal.locationName);
+
+        if (!isMounted) return;
+
+        if (!coords) {
+          console.warn(`[Atlas map] Could not geocode "${journal.locationName}" — skipping pin.`);
+          continue;
+        }
+
+        setPins((prev) => {
+          if (prev.some((p) => p.id === journal.id)) return prev;
+          return [...prev, {
+            id: journal.id,
+            title: journal.title,
+            authorName: journal.authorName,
+            locationName: journal.locationName,
+            category: journal.category,
+            photoUrl: journal.photoUrl,
+            teaser: journal.teaser,
+            createdAt: journal.createdAt,
+            lat: coords.lat,
+            lng: coords.lng
+          }];
+        });
+
+        // Respect Nominatim's 1 req/sec limit — only delay fresh API calls
+        if (!wasCached) {
+          await new Promise((r) => setTimeout(r, 1100));
+        }
+      }
+    }
+
+    resolvePins().catch((err) => console.error("[Atlas map] pin resolution failed:", err));
+    return () => { isMounted = false; };
+  }, [journalsWithLocations]);
+
   return (
-    <section className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-20 sm:px-8 sm:pt-24 lg:grid-cols-[0.95fr_1.05fr] lg:px-10 lg:pb-28 lg:pt-28">
-      <div className="map-border relative max-w-3xl border border-umber/20 bg-bone/55 px-6 py-10 sm:px-10">
-        <p className="mb-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-umber/70">
-          <Compass aria-hidden="true" size={15} />
-          Field journal no. 01
-        </p>
-        <h1 className="font-serif text-8xl font-bold leading-[0.9] tracking-normal text-ink sm:text-9xl lg:text-[10.5rem]">
-          Atlas
+    <section id="map" className="relative w-full overflow-hidden" style={{ height: "620px" }}>
+      {/* Live counter badge */}
+      <div className="absolute left-1/2 top-5 z-20 flex -translate-x-1/2 items-center gap-2.5 rounded-full border border-ink/10 bg-paper/90 px-5 py-2 text-sm font-medium text-ink shadow-soft backdrop-blur-sm">
+        <span
+          className="h-2.5 w-2.5 rounded-full bg-green-500"
+          style={{ boxShadow: "0 0 0 4px rgba(74,222,128,0.2)" }}
+        />
+        Live now &bull; {journals.length} stories from around the world
+      </div>
+
+      {/* Full-width map */}
+      <div className="absolute inset-0 bg-[#E8DFD0]">
+        <AtlasLeafletMap pins={pins} />
+      </div>
+
+      {/* Left text overlay — gradient fades map through */}
+      <div
+        className="absolute inset-y-0 left-0 z-10 flex flex-col justify-center px-10 py-16 lg:px-14"
+        style={{
+          width: "clamp(300px, 38%, 520px)",
+          background: "linear-gradient(to right, rgba(245,239,224,0.96) 45%, rgba(245,239,224,0.82) 70%, transparent 100%)"
+        }}
+      >
+        <h1
+          className="font-serif font-bold leading-tight text-ink"
+          style={{ fontSize: "clamp(2rem, 3.5vw, 3.25rem)" }}
+        >
+          The world is<br />yours to write.
         </h1>
-        <p className="mt-6 max-w-2xl font-serif text-3xl italic leading-tight text-moss sm:text-4xl">
-          The world is yours to write.
+        <p className="mt-4 max-w-xs text-base leading-relaxed text-ink/70">
+          One place. One photo. One story.<br />
+          Share your journey and inspire travelers around the world.
         </p>
 
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-7 flex flex-wrap gap-3">
           <Link
             href="#explore"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-moss px-6 py-4 text-sm font-semibold text-paper transition hover:bg-ink focus:outline-none focus:ring-2 focus:ring-moss focus:ring-offset-2 focus:ring-offset-bone"
+            className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:bg-moss focus:outline-none focus:ring-2 focus:ring-moss focus:ring-offset-2"
           >
-            Start reading
-            <ArrowRight aria-hidden="true" size={17} />
+            <Globe aria-hidden="true" size={16} />
+            Explore the map
           </Link>
           <Link
             href="/write"
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 bg-paper px-6 py-4 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss focus:outline-none focus:ring-2 focus:ring-moss focus:ring-offset-2 focus:ring-offset-bone"
+            className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-paper/80 px-5 py-3 text-sm font-semibold text-ink backdrop-blur-sm transition hover:border-moss hover:text-moss focus:outline-none focus:ring-2 focus:ring-moss focus:ring-offset-2"
           >
-            <BookOpen aria-hidden="true" size={17} />
-            Share your journey
+            <PenLine aria-hidden="true" size={16} />
+            Drop your story
           </Link>
+        </div>
+
+        <div className="mt-7 flex items-center gap-3">
+          <div className="flex -space-x-2.5">
+            {communityAvatars.map(({ letter, bg }) => (
+              <div
+                key={letter}
+                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-paper text-xs font-bold text-paper"
+                style={{ background: bg }}
+                aria-hidden="true"
+              >
+                {letter}
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-ink/65">Join a community of travel storytellers.</p>
         </div>
       </div>
 
-      <aside className="map-border relative min-h-[28rem] overflow-hidden border border-umber/20 bg-[#EADDC5] p-4 shadow-[0_24px_80px_rgba(34,31,26,0.08)]">
-        <svg
-          viewBox="0 0 760 520"
-          role="img"
-          aria-label="Vintage cartographic illustration with compass rose, mountains, route lines, and map grid"
-          className="h-full min-h-[26rem] w-full"
-        >
-          <rect x="10" y="10" width="740" height="500" fill="#EFE3CC" stroke="#8A6040" strokeOpacity="0.32" />
-          <rect x="28" y="28" width="704" height="464" fill="none" stroke="#244033" strokeOpacity="0.18" />
-          <g stroke="#8A6040" strokeOpacity="0.12" strokeWidth="1">
-            {Array.from({ length: 10 }).map((_, index) => (
-              <line key={`v-${index}`} x1={72 + index * 66} y1="30" x2={72 + index * 66} y2="490" />
-            ))}
-            {Array.from({ length: 7 }).map((_, index) => (
-              <line key={`h-${index}`} x1="30" y1={84 + index * 58} x2="730" y2={84 + index * 58} />
-            ))}
-          </g>
-          <g fill="none" stroke="#7D7C4B" strokeOpacity="0.2" strokeWidth="1.2">
-            <path d="M54 166c96-58 193-58 288 0s191 58 288 0" />
-            <path d="M72 260c106-45 205-45 298 0s188 45 285 0" />
-            <path d="M82 354c91-38 178-38 261 0s174 38 272 0" />
-          </g>
-
-          <g transform="translate(154 154)" stroke="#244033" strokeWidth="2" strokeOpacity="0.86">
-            <circle r="62" fill="none" />
-            <circle r="8" fill="#244033" fillOpacity="0.78" />
-            <path d="M0-92 15-17 0-8 -15-17Z" fill="#244033" fillOpacity="0.74" />
-            <path d="M0 92 15 17 0 8 -15 17Z" fill="#B96E45" fillOpacity="0.72" />
-            <path d="M92 0 17 15 8 0 17-15Z" fill="#8A6040" fillOpacity="0.7" />
-            <path d="M-92 0-17 15-8 0-17-15Z" fill="#8A6040" fillOpacity="0.7" />
-            <line x1="0" y1="-112" x2="0" y2="112" strokeOpacity="0.34" />
-            <line x1="-112" y1="0" x2="112" y2="0" strokeOpacity="0.34" />
-            <text x="-7" y="-121" fill="#244033" stroke="none" fontFamily="Cormorant Garamond, Georgia, serif" fontSize="20">N</text>
-          </g>
-
-          <g fill="#244033" fillOpacity="0.64" stroke="#244033" strokeOpacity="0.72">
-            <path d="M430 308 486 206 542 308Z" />
-            <path d="M494 308 548 226 612 308Z" fill="#4D6F5D" fillOpacity="0.56" />
-            <path d="M394 342 445 264 500 342Z" fill="#8A6040" fillOpacity="0.48" />
-            <path d="M486 206 502 235 472 235Z" fill="#F5EFE0" stroke="none" fillOpacity="0.82" />
-            <path d="M548 226 566 254 532 254Z" fill="#F5EFE0" stroke="none" fillOpacity="0.78" />
-          </g>
-
-          <path
-            d="M194 330 C264 276 326 404 398 350 S520 250 606 314"
-            fill="none"
-            stroke="#B96E45"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray="2 16"
-            opacity="0.72"
-          />
-          <g fill="#B96E45">
-            <circle cx="194" cy="330" r="7" />
-            <circle cx="606" cy="314" r="7" />
-          </g>
-          <path d="M610 314c18-22 43-32 76-29-24 20-47 32-76 29Z" fill="#7D7C4B" fillOpacity="0.42" />
-
-          <g stroke="#8A6040" strokeOpacity="0.46" fill="none">
-            <path d="M54 50h74M54 50v74M706 50h-74M706 50v74M54 470h74M54 470v-74M706 470h-74M706 470v-74" strokeWidth="3" />
-            <path d="M68 64h42M68 64v42M692 64h-42M692 64v42M68 456h42M68 456v-42M692 456h-42M692 456v-42" strokeWidth="1.5" />
-          </g>
-          <text x="402" y="105" fill="#8A6040" fillOpacity="0.52" fontFamily="Cormorant Garamond, Georgia, serif" fontSize="28" fontStyle="italic">
-            routes, ridges & recollections
-          </text>
-        </svg>
-      </aside>
+      {/* Category legend */}
+      <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-5 rounded-full border border-ink/10 bg-paper/90 px-6 py-2.5 shadow-soft backdrop-blur-sm">
+        {categoryLegend.map(({ label, color }) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-xs font-medium text-ink">{label}</span>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

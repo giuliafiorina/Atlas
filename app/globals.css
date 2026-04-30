@@ -170,6 +170,10 @@ select {
   background: #fffdf8 !important;
 }
 
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+}
+
 .atlas-map-pin {
   display: inline-flex;
   width: 30px;

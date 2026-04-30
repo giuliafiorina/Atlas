@@ -44,6 +44,8 @@ export type AtlasJournal = {
   teaser: string;
   locationName: string;
   zoneName: string;
+  latitude: number | null;
+  longitude: number | null;
   category: TravelCategory;
   journeyMode: boolean;
   stickers: TravelSticker[];

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { AtlasJournal } from "@/data/journals";
+import type { AtlasJournal, TravelCategory } from "@/data/journals";
 
 type LiveWorldMapProps = {
   journals: AtlasJournal[];
@@ -14,6 +14,10 @@ export type JournalMapPin = {
   title: string;
   authorName: string;
   locationName: string;
+  category: TravelCategory;
+  photoUrl: string | null;
+  teaser: string;
+  createdAt: string;
   lat: number;
   lng: number;
 };
@@ -117,6 +121,10 @@ export function LiveWorldMap({ journals }: LiveWorldMapProps) {
             title: journal.title,
             authorName: journal.authorName,
             locationName: journal.locationName,
+            category: journal.category,
+            photoUrl: journal.photoUrl,
+            teaser: journal.teaser,
+            createdAt: journal.createdAt,
             lat: coordinates.lat,
             lng: coordinates.lng
           };
@@ -127,11 +135,7 @@ export function LiveWorldMap({ journals }: LiveWorldMapProps) {
         return;
       }
 
-      setPins(
-        resolvedPins.filter((pin): pin is JournalMapPin => {
-          return Boolean(pin);
-        })
-      );
+      setPins(resolvedPins.filter(Boolean) as JournalMapPin[]);
       setIsGeocoding(false);
     }
 

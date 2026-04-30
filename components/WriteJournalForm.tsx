@@ -153,12 +153,34 @@ export function WriteJournalForm() {
 
       const { data: publicPhoto } = supabase.storage.from(bucket).getPublicUrl(photoPath);
 
+      // Geocode the location so the pin shows on the map immediately
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      try {
+        const geoUrl = new URL("https://nominatim.openstreetmap.org/search");
+        geoUrl.searchParams.set("format", "json");
+        geoUrl.searchParams.set("limit", "1");
+        geoUrl.searchParams.set("q", locationName.trim());
+        const geoRes = await fetch(geoUrl.toString(), { headers: { Accept: "application/json" } });
+        if (geoRes.ok) {
+          const geoData = (await geoRes.json()) as Array<{ lat: string; lon: string }>;
+          if (geoData[0]) {
+            latitude = Number(geoData[0].lat);
+            longitude = Number(geoData[0].lon);
+          }
+        }
+      } catch {
+        // geocoding is best-effort — continue without coordinates
+      }
+
       const { error: insertError } = await supabase.from("journals").insert({
         title: title.trim(),
         body,
         teaser: teaser.trim(),
         location_name: locationName.trim(),
         zone_name: zoneName.trim(),
+        latitude,
+        longitude,
         category,
         journey_mode: journeyMode,
         stickers,

@@ -19,6 +19,8 @@ export type JournalRow = {
   teaser: string | null;
   location_name: string | null;
   zone_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
   category: TravelCategory | null;
   journey_mode: boolean;
   stickers: TravelSticker[] | null;
@@ -38,6 +40,8 @@ export type JournalInsert = {
   teaser?: string | null;
   location_name?: string | null;
   zone_name?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   category?: TravelCategory | null;
   journey_mode?: boolean;
   stickers?: TravelSticker[];
